@@ -1,0 +1,6 @@
+@TCTM.Server_HostAddress = http://localhost:5081
+
+GET {{TCTM.Server_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

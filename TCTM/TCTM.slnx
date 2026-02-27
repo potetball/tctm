@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="tctm.client/tctm.client.esproj">
+    <Build />
+    <Deploy />
+  </Project>
+  <Project Path="TCTM.Server/TCTM.Server.csproj" />
+</Solution>
