@@ -3,7 +3,7 @@ import { fileURLToPath, URL } from 'node:url';
 import { defineConfig } from 'vite';
 import plugin from '@vitejs/plugin-vue';
 import vuetify from 'vite-plugin-vuetify';
-import tailwindcss from '@tailwindcss/vite';
+
 import fs from 'fs';
 import path from 'path';
 import child_process from 'child_process';
@@ -41,7 +41,7 @@ const target = env.ASPNETCORE_HTTPS_PORT ? `https://localhost:${env.ASPNETCORE_H
 
 // https://vitejs.dev/config/
 export default defineConfig({
-    plugins: [plugin(), vuetify({ autoImport: true }), tailwindcss()],
+    plugins: [plugin(), vuetify({ autoImport: true })],
     resolve: {
         alias: {
             '@': fileURLToPath(new URL('./src', import.meta.url))

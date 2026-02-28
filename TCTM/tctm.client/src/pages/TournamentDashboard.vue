@@ -286,11 +286,11 @@ onMounted(loadData)
       </v-card>
 
       <!-- Lobby: Invite & Join -->
-      <v-row v-if="isLobby" class="mb-6">
+      <v-row v-if="isLobby" class="mb-6 py-6">
         <v-col cols="12" md="6">
           <v-card class="pa-5 h-100" variant="outlined" rounded="xl">
             <h3 class="text-h6 font-weight-bold mb-3">
-              <v-icon icon="mdi-ticket-confirmation-outline" class="mr-1" />
+              <v-icon icon="mdi-ticket-confirmation-outline" class="mr-1 mb-3" />
               Invite Players
             </h3>
             <div class="d-flex align-center ga-2 mb-3">
