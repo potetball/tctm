@@ -15,6 +15,7 @@ public static class TournamentMappings
             tournament.Format,
             tournament.TimeControlPreset,
             tournament.TimeControlMinutes,
+            tournament.PlayBothColors,
             tournament.Status,
             tournament.CreatedAt,
             tournament.Players.Count

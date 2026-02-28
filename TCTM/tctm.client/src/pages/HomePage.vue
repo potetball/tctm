@@ -8,6 +8,11 @@ const inviteCode = ref('')
 const loading = ref(false)
 const error = ref('')
 
+// Re-auth state
+const playerToken = ref('')
+const reauthLoading = ref(false)
+const reauthError = ref('')
+
 async function joinTournament() {
   if (!inviteCode.value.trim()) return
 
@@ -23,6 +28,35 @@ async function joinTournament() {
       : (err.message || 'Failed to look up tournament.')
   } finally {
     loading.value = false
+  }
+}
+
+async function reauthenticate() {
+  if (!playerToken.value.trim()) return
+
+  reauthLoading.value = true
+  reauthError.value = ''
+
+  try {
+    const result = await tournaments.reauthenticate(playerToken.value.trim())
+
+    // Store player credentials in localStorage
+    const playerData = JSON.parse(localStorage.getItem('tctm_players') || '{}')
+    playerData[result.slug] = {
+      playerId: result.playerId,
+      playerToken: playerToken.value.trim(),
+      displayName: result.displayName,
+    }
+    localStorage.setItem('tctm_players', JSON.stringify(playerData))
+
+    // Navigate to the tournament
+    router.push({ name: 'tournament', params: { slug: result.slug } })
+  } catch (err) {
+    reauthError.value = err.status === 401
+      ? 'Invalid player token.'
+      : (err.message || 'Failed to authenticate.')
+  } finally {
+    reauthLoading.value = false
   }
 }
 </script>
@@ -74,7 +108,7 @@ async function joinTournament() {
         />
 
         <v-btn
-          color="grey-darken-3"
+          color="primary"
           size="large"
           block
           rounded="lg"
@@ -85,6 +119,41 @@ async function joinTournament() {
           @click="joinTournament"
         >
           Join Tournament
+        </v-btn>
+
+        <v-divider class="my-2" />
+
+        <div class="text-center text-body-2 text-medium-emphasis">
+          — or re-authenticate with your player token —
+        </div>
+
+        <v-alert v-if="reauthError" type="error" variant="tonal" class="mb-0" density="compact" closable @click:close="reauthError = ''">
+          {{ reauthError }}
+        </v-alert>
+
+        <v-text-field
+          v-model="playerToken"
+          label="Player Token"
+          placeholder="Paste your token here"
+          variant="outlined"
+          density="comfortable"
+          prepend-inner-icon="mdi-key"
+          hide-details
+          @keyup.enter="reauthenticate"
+        />
+
+        <v-btn
+          color="primary"
+          size="large"
+          block
+          rounded="lg"
+          variant="tonal"
+          prepend-icon="mdi-account-key"
+          :disabled="playerToken.length === 0"
+          :loading="reauthLoading"
+          @click="reauthenticate"
+        >
+          Authenticate
         </v-btn>
       </div>
 

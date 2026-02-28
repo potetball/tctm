@@ -10,6 +10,7 @@ public class Tournament
     public TournamentFormat Format { get; set; }
     public TimeControlPreset TimeControlPreset { get; set; }
     public int TimeControlMinutes { get; set; }
+    public bool PlayBothColors { get; set; }
     public TournamentStatus Status { get; set; }
     public DateTime CreatedAt { get; set; }
 

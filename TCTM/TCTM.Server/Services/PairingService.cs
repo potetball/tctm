@@ -14,7 +14,7 @@ public static class PairingService
     /// </summary>
     public static Round GenerateFirstRound(Tournament tournament, List<Player> players)
     {
-        return tournament.Format switch
+        var round = tournament.Format switch
         {
             TournamentFormat.RoundRobin => GenerateRoundRobinRound(tournament, players, roundNumber: 1),
             TournamentFormat.Swiss => GenerateSwissFirstRound(tournament, players),
@@ -22,6 +22,11 @@ public static class PairingService
             TournamentFormat.DoubleElimination => GenerateDoubleEliminationFirstRound(tournament, players),
             _ => throw new InvalidOperationException($"Unsupported format: {tournament.Format}")
         };
+
+        if (tournament.PlayBothColors)
+            AddColorSwappedMatches(round);
+
+        return round;
     }
 
     /// <summary>
@@ -31,7 +36,7 @@ public static class PairingService
     {
         var nextRoundNumber = completedRounds.Count + 1;
 
-        return tournament.Format switch
+        var round = tournament.Format switch
         {
             TournamentFormat.RoundRobin => GenerateRoundRobinRound(tournament, players, nextRoundNumber),
             TournamentFormat.Swiss => GenerateSwissNextRound(tournament, players, completedRounds, nextRoundNumber),
@@ -39,6 +44,11 @@ public static class PairingService
             TournamentFormat.DoubleElimination => GenerateDoubleEliminationNextRound(tournament, players, completedRounds, nextRoundNumber),
             _ => throw new InvalidOperationException($"Unsupported format: {tournament.Format}")
         };
+
+        if (tournament.PlayBothColors)
+            AddColorSwappedMatches(round);
+
+        return round;
     }
 
     // ---------------------------------------------------------------
@@ -675,5 +685,33 @@ public static class PairingService
             }
         }
         return byePlayers;
+    }
+
+    /// <summary>
+    /// When PlayBothColors is enabled, duplicate every non-bye match in the round
+    /// with white and black swapped so each pairing is played from both sides.
+    /// Bye matches are not duplicated (a bye is a bye regardless of color).
+    /// </summary>
+    private static void AddColorSwappedMatches(Round round)
+    {
+        var originals = round.Matches.ToList();
+
+        foreach (var match in originals)
+        {
+            // Skip byes — no need to swap a bye
+            if (!match.WhitePlayerId.HasValue || !match.BlackPlayerId.HasValue)
+                continue;
+
+            round.Matches.Add(new Match
+            {
+                Id = Guid.NewGuid(),
+                RoundId = round.Id,
+                WhitePlayerId = match.BlackPlayerId,   // swapped
+                BlackPlayerId = match.WhitePlayerId,   // swapped
+                Result = null,
+                Disputed = false,
+                Bracket = match.Bracket
+            });
+        }
     }
 }

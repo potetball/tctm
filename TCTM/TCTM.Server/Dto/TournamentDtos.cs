@@ -7,7 +7,8 @@ public record CreateTournamentRequest(
     string Name,
     TournamentFormat Format,
     TimeControlPreset TimeControlPreset,
-    int TimeControlMinutes
+    int TimeControlMinutes,
+    bool PlayBothColors = false
 );
 
 // Response after creating a tournament (includes secrets)
@@ -39,7 +40,19 @@ public record TournamentDto(
     TournamentFormat Format,
     TimeControlPreset TimeControlPreset,
     int TimeControlMinutes,
+    bool PlayBothColors,
     TournamentStatus Status,
     DateTime CreatedAt,
     int PlayerCount
+);
+
+// POST /api/tournaments/reauthenticate
+public record ReauthenticateRequest(
+    string PlayerToken
+);
+
+public record ReauthenticateResponse(
+    string Slug,
+    Guid PlayerId,
+    string DisplayName
 );

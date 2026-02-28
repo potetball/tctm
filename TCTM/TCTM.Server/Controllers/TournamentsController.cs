@@ -30,6 +30,7 @@ public class TournamentsController(TctmDbContext db) : ControllerBase
             Format = request.Format,
             TimeControlPreset = request.TimeControlPreset,
             TimeControlMinutes = request.TimeControlMinutes,
+            PlayBothColors = request.PlayBothColors,
             Status = TournamentStatus.Lobby,
             CreatedAt = DateTime.UtcNow
         };
@@ -107,6 +108,26 @@ public class TournamentsController(TctmDbContext db) : ControllerBase
         await db.SaveChangesAsync();
 
         return Ok(new JoinTournamentResponse(player.Id, playerToken));
+    }
+
+    /// <summary>POST /api/tournaments/reauthenticate — Verify a player token and return player info.</summary>
+    [HttpPost("reauthenticate")]
+    public async Task<IActionResult> Reauthenticate([FromBody] ReauthenticateRequest request)
+    {
+        var hashedToken = HashToken(request.PlayerToken);
+
+        var player = await db.Players
+            .Include(p => p.Tournament)
+            .FirstOrDefaultAsync(p => p.PlayerToken == hashedToken);
+
+        if (player is null)
+            return Unauthorized(new { error = "Invalid player token." });
+
+        return Ok(new ReauthenticateResponse(
+            player.Tournament.Slug,
+            player.Id,
+            player.DisplayName
+        ));
     }
 
     /// <summary>POST /api/tournaments/{slug}/start — Start the tournament (admin).</summary>

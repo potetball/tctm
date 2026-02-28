@@ -2,7 +2,7 @@ import { get, post, adminHeader } from './httpClient'
 
 /**
  * POST /api/tournaments
- * @param {{ name: string, format: string, timeControlPreset: string, timeControlMinutes: number }} data
+ * @param {{ name: string, format: string, timeControlPreset: string, timeControlMinutes: number, playBothColors?: boolean }} data
  * @returns {Promise<{ slug: string, name: string, inviteCode: string, adminToken: string }>}
  */
 export function createTournament(data) {
@@ -35,6 +35,15 @@ export function getTournamentByInviteCode(code) {
  */
 export function joinTournament(slug, data) {
   return post(`/tournaments/${slug}/join`, data)
+}
+
+/**
+ * POST /api/tournaments/reauthenticate
+ * @param {string} playerToken
+ * @returns {Promise<{ slug: string, playerId: string, displayName: string }>}
+ */
+export function reauthenticate(playerToken) {
+  return post('/tournaments/reauthenticate', { playerToken })
 }
 
 /**

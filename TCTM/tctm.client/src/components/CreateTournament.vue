@@ -8,6 +8,7 @@ const name = ref('')
 const format = ref(TournamentFormat.RoundRobin)
 const timeControlPreset = ref(TimeControlPreset.Rapid)
 const timeControlMinutes = ref(15)
+const playBothColors = ref(false)
 const loading = ref(false)
 const error = ref('')
 
@@ -46,6 +47,7 @@ async function submit() {
       format: format.value,
       timeControlPreset: timeControlPreset.value,
       timeControlMinutes: timeControlMinutes.value,
+      playBothColors: playBothColors.value,
     })
     emit('created', result)
   } catch (err) {
@@ -126,6 +128,19 @@ async function submit() {
             min="1"
             max="180"
           />
+
+          <div>
+            <v-switch
+              v-model="playBothColors"
+              label="Play Both Colors"
+              color="amber-darken-2"
+              density="comfortable"
+              hide-details
+            />
+            <p class="text-body-2 text-medium-emphasis mt-1 mx-3">
+              Each pairing is played twice with swapped colors — once as white and once as black — so neither side has an advantage.
+            </p>
+          </div>
 
           <v-btn
             color="amber-darken-2"

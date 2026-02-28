@@ -12,7 +12,6 @@ const router = useRouter()
         Tiny Chess Tournament Manager
       </v-app-bar-title>
     </v-app-bar>
-
     <v-main>
       <router-view />
     </v-main>

@@ -28,6 +28,11 @@ const displayName = ref('')
 const joinLoading = ref(false)
 const joinError = ref('')
 
+// Token success dialog state (shown after joining)
+const tokenDialog = ref(false)
+const joinedToken = ref('')
+const tokenCopied = ref(false)
+
 // Result reporting dialog
 const resultDialog = ref(false)
 const selectedMatch = ref(null)
@@ -35,23 +40,30 @@ const selectedResult = ref(null)
 const reportLoading = ref(false)
 const reportError = ref('')
 
+// Reactive trigger to force re-evaluation of localStorage-based computed properties
+const localStorageVersion = ref(0)
+
 // --- Computed ---
 const isAdmin = computed(() => {
+  localStorageVersion.value // dependency trigger
   const tokens = JSON.parse(localStorage.getItem('tctm_admin_tokens') || '{}')
   return !!tokens[slug]
 })
 
 const adminToken = computed(() => {
+  localStorageVersion.value // dependency trigger
   const tokens = JSON.parse(localStorage.getItem('tctm_admin_tokens') || '{}')
   return tokens[slug] || null
 })
 
 const myPlayerId = computed(() => {
+  localStorageVersion.value // dependency trigger
   const playerData = JSON.parse(localStorage.getItem('tctm_players') || '{}')
   return playerData[slug]?.playerId || null
 })
 
 const myPlayerToken = computed(() => {
+  localStorageVersion.value // dependency trigger
   const playerData = JSON.parse(localStorage.getItem('tctm_players') || '{}')
   return playerData[slug]?.playerToken || null
 })
@@ -148,9 +160,16 @@ async function joinTournament() {
       displayName: displayName.value.trim(),
     }
     localStorage.setItem('tctm_players', JSON.stringify(playerData))
+    localStorageVersion.value++
 
     joinDialog.value = false
     displayName.value = ''
+
+    // Show the player token so the user can copy it
+    joinedToken.value = result.playerToken
+    tokenCopied.value = false
+    tokenDialog.value = true
+
     await loadData()
   } catch (err) {
     joinError.value = err.body?.error || err.message || 'Failed to join tournament.'
@@ -212,6 +231,11 @@ function canReport(match) {
 function copyInviteLink() {
   const url = `${window.location.origin}/t/${slug}`
   navigator.clipboard.writeText(url)
+}
+
+function copyToken() {
+  navigator.clipboard.writeText(joinedToken.value)
+  tokenCopied.value = true
 }
 
 onMounted(loadData)
@@ -438,6 +462,41 @@ onMounted(loadData)
           No rounds generated yet. The organiser needs to advance rounds from the admin panel.
         </p>
       </v-card>
+
+      <!-- Token Success Dialog -->
+      <v-dialog v-model="tokenDialog" max-width="460" persistent>
+        <v-card class="pa-6" rounded="xl">
+          <div class="text-center mb-4">
+            <v-icon icon="mdi-check-circle" size="48" color="green" />
+            <h3 class="text-h6 font-weight-bold mt-2">You're In!</h3>
+            <p class="text-body-2 text-medium-emphasis mt-1">
+              Save your player token — you'll need it to re-authenticate on another device or after clearing your browser data.
+            </p>
+          </div>
+          <v-text-field
+            :model-value="joinedToken"
+            label="Player Token"
+            variant="outlined"
+            density="comfortable"
+            readonly
+            prepend-inner-icon="mdi-key"
+            append-inner-icon="mdi-content-copy"
+            @click:append-inner="copyToken"
+          />
+          <v-alert v-if="tokenCopied" type="success" variant="tonal" density="compact" class="mb-3">
+            Copied to clipboard!
+          </v-alert>
+          <v-btn
+            color="amber-darken-2"
+            block
+            rounded="lg"
+            class="mt-2"
+            @click="tokenDialog = false"
+          >
+            Done
+          </v-btn>
+        </v-card>
+      </v-dialog>
 
       <!-- Join Dialog -->
       <v-dialog v-model="joinDialog" max-width="400" persistent>
