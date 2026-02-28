@@ -1,47 +1,78 @@
 <script setup>
-import HelloWorld from './components/HelloWorld.vue'
-import TheWelcome from './components/TheWelcome.vue'
+import { ref } from 'vue'
+
+const inviteCode = ref('')
 </script>
 
 <template>
-  <header>
-    <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+  <v-app>
+    <v-app-bar color="grey-darken-4" flat>
+      <v-app-bar-title>
+        <v-icon icon="mdi-chess-knight" class="mr-2" />
+        Tiny Chess Tournament Manager
+      </v-app-bar-title>
+    </v-app-bar>
 
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div>
-  </header>
+    <v-main>
+      <v-container class="d-flex align-center justify-center" style="min-height: 80vh">
+        <v-card max-width="520" width="100%" class="pa-6" elevation="8" rounded="xl">
+          <div class="text-center mb-6">
+            <v-icon icon="mdi-chess-queen" size="64" color="amber-darken-2" />
+            <h1 class="text-h4 font-weight-bold mt-4">Welcome to TCTM</h1>
+            <p class="text-body-1 text-medium-emphasis mt-2">
+              Organise and manage small chess tournaments with ease.
+              Create a new tournament or join an existing one.
+            </p>
+          </div>
 
-  <main>
-    <TheWelcome />
-  </main>
+          <v-divider class="mb-6" />
+
+          <div class="d-flex flex-column ga-4">
+            <v-btn
+              color="amber-darken-2"
+              size="x-large"
+              block
+              rounded="lg"
+              prepend-icon="mdi-plus-circle-outline"
+            >
+              Create Tournament
+            </v-btn>
+
+            <div class="text-center text-body-2 text-medium-emphasis">
+              — or join with an invite code —
+            </div>
+
+            <v-text-field
+              v-model="inviteCode"
+              label="Invite Code"
+              placeholder="e.g. ABC123"
+              variant="outlined"
+              density="comfortable"
+              prepend-inner-icon="mdi-ticket-confirmation-outline"
+              maxlength="6"
+              hide-details
+            />
+
+            <v-btn
+              color="grey-darken-3"
+              size="large"
+              block
+              rounded="lg"
+              variant="tonal"
+              prepend-icon="mdi-login"
+              :disabled="inviteCode.length === 0"
+            >
+              Join Tournament
+            </v-btn>
+          </div>
+
+          <div class="text-center mt-8">
+            <p class="text-caption text-disabled">
+              No account required — just pick a name and play.
+            </p>
+          </div>
+        </v-card>
+      </v-container>
+    </v-main>
+  </v-app>
 </template>
-
-<style scoped>
-header {
-  line-height: 1.5;
-}
-
-.logo {
-  display: block;
-  margin: 0 auto 2rem;
-}
-
-@media (min-width: 1024px) {
-  header {
-    display: flex;
-    place-items: center;
-    padding-right: calc(var(--section-gap) / 2);
-  }
-
-  .logo {
-    margin: 0 2rem 0 0;
-  }
-
-  header .wrapper {
-    display: flex;
-    place-items: flex-start;
-    flex-wrap: wrap;
-  }
-}
-</style>

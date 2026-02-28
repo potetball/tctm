@@ -1,12 +1,25 @@
+using Microsoft.EntityFrameworkCore;
+using TCTM.Server.DataModel;
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+builder.Services.AddDbContext<TctmDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
 var app = builder.Build();
+
+// Ensure the database is created and up-to-date.
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<TctmDbContext>();
+    db.Database.Migrate();
+}
 
 app.UseDefaultFiles();
 app.MapStaticAssets();

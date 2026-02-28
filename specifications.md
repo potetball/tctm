@@ -6,12 +6,20 @@
 
 ### Tech Stack
 
-| Layer    | Technology                  |
-|----------|-----------------------------|
-| Frontend | Vue 3 (Vite)                |
-| Backend  | ASP.NET Core (C#)           |
-| Database | SQLite (via EF Core)        |
-| Hosting  | Single-server / Docker-ready |
+| Layer    | Technology                                      |
+|----------|-------------------------------------------------|
+| Frontend | Vue 3 (Vite), Vuetify 4, Tailwind CSS 4         |
+| Backend  | ASP.NET Core (C#)                                |
+| Database | SQLite (via EF Core)                             |
+| Hosting  | Single-server / Docker-ready                     |
+
+#### Frontend Details
+
+- **Vue 3** — Composition API (`<script setup>`), single-file components
+- **Vite 7** — Dev server & build tooling
+- **Vuetify 4** — Material Design component library (auto-imported via `vite-plugin-vuetify`)
+- **Tailwind CSS 4** — Utility-first CSS framework (integrated via `@tailwindcss/vite`)
+- **Material Design Icons** (`@mdi/font`) — Icon set used with Vuetify
 
 ---
 
