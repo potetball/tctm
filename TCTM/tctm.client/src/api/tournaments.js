@@ -19,6 +19,15 @@ export function getTournament(slug) {
 }
 
 /**
+ * GET /api/tournaments/by-invite-code/{code}
+ * @param {string} code
+ * @returns {Promise<TournamentDto>}
+ */
+export function getTournamentByInviteCode(code) {
+  return get(`/tournaments/by-invite-code/${encodeURIComponent(code)}`)
+}
+
+/**
  * POST /api/tournaments/{slug}/join
  * @param {string} slug
  * @param {{ inviteCode: string, displayName: string }} data

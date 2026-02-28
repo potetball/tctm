@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using TCTM.Server.DataModel;
 using TCTM.Server.Mappings;
+using TCTM.Server.Services;
 
 namespace TCTM.Server.Controllers;
 
@@ -50,19 +51,20 @@ public class RoundsController(TctmDbContext db) : ControllerBase
         if (lastRound is not null && lastRound.Status != RoundStatus.Completed)
             return BadRequest(new { error = "The current round is not yet completed." });
 
-        // TODO: Implement pairing generation based on tournament format.
-        // For now, create an empty round as a placeholder.
-        var nextRoundNumber = (lastRound?.RoundNumber ?? 0) + 1;
+        // Load players and full round data for pairing generation
+        await db.Entry(tournament).Collection(t => t.Players).LoadAsync();
+        var completedRounds = await db.Rounds
+            .Where(r => r.TournamentId == tournament.Id && r.Status == RoundStatus.Completed)
+            .Include(r => r.Matches)
+            .OrderBy(r => r.RoundNumber)
+            .ToListAsync();
 
-        var round = new Round
-        {
-            Id = Guid.NewGuid(),
-            TournamentId = tournament.Id,
-            RoundNumber = nextRoundNumber,
-            Status = RoundStatus.InProgress
-        };
+        var players = tournament.Players.ToList();
+        var round = PairingService.GenerateNextRound(tournament, players, completedRounds);
 
         db.Rounds.Add(round);
+        foreach (var match in round.Matches)
+            db.Matches.Add(match);
         await db.SaveChangesAsync();
 
         // Reload with matches/players for DTO

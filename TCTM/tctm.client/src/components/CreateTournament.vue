@@ -57,7 +57,7 @@ async function submit() {
 </script>
 
 <template>
-  <v-container class="d-flex align-center justify-center" style="min-height: 80vh">
+  <v-container class="d-flex align-center justify-center" style="max-width: 1200px; margin: 0 auto; min-height: 80vh;">
     <v-card max-width="560" width="100%" class="pa-6" elevation="8" rounded="xl">
       <div class="text-center mb-6">
         <v-icon icon="mdi-trophy-outline" size="64" color="amber-darken-2" />

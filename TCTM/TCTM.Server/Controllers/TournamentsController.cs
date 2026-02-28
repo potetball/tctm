@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using TCTM.Server.DataModel;
 using TCTM.Server.Dto;
 using TCTM.Server.Mappings;
+using TCTM.Server.Services;
 
 namespace TCTM.Server.Controllers;
 
@@ -42,6 +43,20 @@ public class TournamentsController(TctmDbContext db) : ControllerBase
             inviteCode,
             adminToken
         ));
+    }
+
+    /// <summary>GET /api/tournaments/by-invite-code/{code} — Lookup tournament by invite code.</summary>
+    [HttpGet("by-invite-code/{code}")]
+    public async Task<IActionResult> GetByInviteCode(string code)
+    {
+        var tournament = await db.Tournaments
+            .Include(t => t.Players)
+            .FirstOrDefaultAsync(t => t.InviteCode == code.ToUpperInvariant());
+
+        if (tournament is null)
+            return NotFound(new { error = "No tournament found with that invite code." });
+
+        return Ok(tournament.ToDto());
     }
 
     /// <summary>GET /api/tournaments/{slug} — Get tournament details.</summary>
@@ -109,10 +124,23 @@ public class TournamentsController(TctmDbContext db) : ControllerBase
         if (tournament.Status != TournamentStatus.Lobby)
             return BadRequest(new { error = "Tournament is not in lobby." });
 
-        tournament.Status = TournamentStatus.InProgress;
-        await db.SaveChangesAsync();
+        // Load players for pairing
+        await db.Entry(tournament).Collection(t => t.Players).LoadAsync();
 
-        // TODO: Generate first round pairings based on tournament format.
+        if (tournament.Players.Count < 2)
+            return BadRequest(new { error = "Need at least 2 players to start." });
+
+        tournament.Status = TournamentStatus.InProgress;
+
+        // Generate first round pairings
+        var players = tournament.Players.ToList();
+        var firstRound = PairingService.GenerateFirstRound(tournament, players);
+
+        db.Rounds.Add(firstRound);
+        foreach (var match in firstRound.Matches)
+            db.Matches.Add(match);
+
+        await db.SaveChangesAsync();
 
         return Ok(tournament.ToDto());
     }
