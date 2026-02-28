@@ -21,3 +21,17 @@ export function generateNextRound(slug, adminToken) {
     headers: adminHeader(adminToken),
   })
 }
+
+/**
+ * POST /api/tournaments/{slug}/rounds/{roundNumber}/complete
+ * Complete a round and recalculate standings (admin).
+ * @param {string} slug
+ * @param {number} roundNumber
+ * @param {string} adminToken
+ * @returns {Promise<StandingDto[]>}
+ */
+export function completeRound(slug, roundNumber, adminToken) {
+  return post(`/tournaments/${slug}/rounds/${roundNumber}/complete`, null, {
+    headers: adminHeader(adminToken),
+  })
+}

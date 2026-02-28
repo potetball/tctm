@@ -1,1 +1,6 @@
 @import './base.css';
+
+/* Use theme cardBorder color for outlined card borders in dark mode */
+.v-theme--dark .v-card--variant-outlined {
+  border-color: rgb(var(--v-theme-cardBorder));
+}

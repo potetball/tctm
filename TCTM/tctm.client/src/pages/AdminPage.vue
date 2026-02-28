@@ -9,6 +9,7 @@ import {
   TournamentStatus,
   MatchResult,
 } from '@/api'
+import RoundScoreboard from '@/components/RoundScoreboard.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -35,6 +36,11 @@ const overrideError = ref('')
 const removeDialog = ref(false)
 const removePlayer = ref(null)
 const removeLoading = ref(false)
+
+// Scoreboard after round completion
+const scoreboardVisible = ref(false)
+const scoreboardStandings = ref([])
+const completedRoundNumber = ref(0)
 
 // --- Computed ---
 const adminToken = computed(() => {
@@ -114,6 +120,27 @@ async function generateNextRound() {
     await loadData()
   } catch (err) {
     actionError.value = err.body?.error || err.message || 'Failed to generate next round.'
+  } finally {
+    actionLoading.value = false
+  }
+}
+
+async function completeCurrentRound() {
+  if (!currentRound.value) return
+
+  actionLoading.value = true
+  actionError.value = ''
+  actionSuccess.value = ''
+
+  try {
+    const updatedStandings = await rounds.completeRound(slug, currentRound.value.roundNumber, adminToken.value)
+    completedRoundNumber.value = currentRound.value.roundNumber
+    scoreboardStandings.value = updatedStandings
+    actionSuccess.value = `Round ${currentRound.value.roundNumber} completed!`
+    await loadData()
+    scoreboardVisible.value = true
+  } catch (err) {
+    actionError.value = err.body?.error || err.message || 'Failed to complete round.'
   } finally {
     actionLoading.value = false
   }
@@ -237,7 +264,21 @@ onMounted(loadData)
             </v-btn>
 
             <v-btn
-              v-if="isInProgress"
+              v-if="isInProgress && currentRound && currentRound.status !== 'Completed'"
+              color="green"
+              :loading="actionLoading"
+              :disabled="!allCurrentRoundComplete"
+              prepend-icon="mdi-check-circle"
+              @click="completeCurrentRound"
+            >
+              Complete Round {{ currentRound?.roundNumber }}
+              <v-tooltip v-if="!allCurrentRoundComplete" activator="parent" location="bottom">
+                All match results must be reported first
+              </v-tooltip>
+            </v-btn>
+
+            <v-btn
+              v-if="isInProgress && (!currentRound || currentRound.status === 'Completed')"
               color="amber-darken-2"
               :loading="actionLoading"
               prepend-icon="mdi-skip-next"
@@ -385,6 +426,13 @@ onMounted(loadData)
         </div>
       </v-card>
     </v-dialog>
+
+    <!-- Round Scoreboard -->
+    <RoundScoreboard
+      v-model="scoreboardVisible"
+      :standings="scoreboardStandings"
+      :round-number="completedRoundNumber"
+    />
 
     <!-- Remove Player Dialog -->
     <v-dialog v-model="removeDialog" max-width="380" persistent>

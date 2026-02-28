@@ -254,7 +254,7 @@ onMounted(loadData)
 
     <template v-else-if="tournament">
       <!-- Header Card -->
-      <v-card class="pa-6 mb-6" elevation="4" rounded="xl">
+      <v-card class="pa-6 pb-6 mb-6" elevation="4" rounded="xl">
         <div class="d-flex align-center justify-space-between flex-wrap ga-4">
           <div>
             <div class="d-flex align-center ga-2 mb-2">
@@ -312,7 +312,7 @@ onMounted(loadData)
       <!-- Lobby: Invite & Join -->
       <v-row v-if="isLobby" class="mb-6 py-6">
         <v-col cols="12" md="6">
-          <v-card class="pa-5 h-100" variant="outlined" rounded="xl">
+          <v-card class="pa-5 pb-6 h-100" variant="outlined" rounded="xl">
             <h3 class="text-h6 font-weight-bold mb-3">
               <v-icon icon="mdi-ticket-confirmation-outline" class="mr-1 mb-3" />
               Invite Players
@@ -335,7 +335,7 @@ onMounted(loadData)
         </v-col>
 
         <v-col cols="12" md="6">
-          <v-card class="pa-5 h-100" variant="outlined" rounded="xl">
+          <v-card class="pa-5 pb-6 h-100" variant="outlined" rounded="xl">
             <h3 class="text-h6 font-weight-bold mb-3">
               <v-icon icon="mdi-account-plus" class="mr-1" />
               Join Tournament
@@ -364,7 +364,7 @@ onMounted(loadData)
       </v-row>
 
       <!-- Player List -->
-      <v-card class="pa-5 mb-6" variant="outlined" rounded="xl">
+      <v-card class="pa-5 pb-6 mb-6" variant="outlined" rounded="xl">
         <h3 class="text-h6 font-weight-bold mb-3">
           <v-icon icon="mdi-account-group" class="mr-1" />
           Players
@@ -390,7 +390,7 @@ onMounted(loadData)
 
       <!-- Rounds & Matches -->
       <template v-if="roundList.length">
-        <v-card v-for="round in roundList" :key="round.id" class="pa-5 mb-4" variant="outlined" rounded="xl">
+        <v-card v-for="round in roundList" :key="round.id" class="pa-5 pb-6 mb-4" variant="outlined" rounded="xl">
           <div class="d-flex align-center justify-space-between mb-3">
             <h3 class="text-h6 font-weight-bold">
               <v-icon icon="mdi-sword-cross" class="mr-1" />
@@ -457,7 +457,7 @@ onMounted(loadData)
         </v-card>
       </template>
 
-      <v-card v-else-if="isInProgress" class="pa-5 mb-6" variant="outlined" rounded="xl">
+      <v-card v-else-if="isInProgress" class="pa-5 pb-6 mb-6" variant="outlined" rounded="xl">
         <p class="text-body-1 text-medium-emphasis text-center">
           No rounds generated yet. The organiser needs to advance rounds from the admin panel.
         </p>
@@ -465,7 +465,7 @@ onMounted(loadData)
 
       <!-- Token Success Dialog -->
       <v-dialog v-model="tokenDialog" max-width="460" persistent>
-        <v-card class="pa-6" rounded="xl">
+        <v-card class="pa-6 pb-6" rounded="xl">
           <div class="text-center mb-4">
             <v-icon icon="mdi-check-circle" size="48" color="green" />
             <h3 class="text-h6 font-weight-bold mt-2">You're In!</h3>
@@ -500,7 +500,7 @@ onMounted(loadData)
 
       <!-- Join Dialog -->
       <v-dialog v-model="joinDialog" max-width="400" persistent>
-        <v-card class="pa-6" rounded="xl">
+        <v-card class="pa-6 pb-6" rounded="xl">
           <h3 class="text-h6 font-weight-bold mb-4">Join Tournament</h3>
           <v-alert v-if="joinError" type="error" variant="tonal" class="mb-4" density="compact">
             {{ joinError }}
@@ -539,7 +539,7 @@ onMounted(loadData)
 
       <!-- Report Result Dialog -->
       <v-dialog v-model="resultDialog" max-width="420" persistent>
-        <v-card class="pa-6" rounded="xl">
+        <v-card class="pa-6 pb-6" rounded="xl">
           <h3 class="text-h6 font-weight-bold mb-2">Report Result</h3>
           <p v-if="selectedMatch" class="text-body-2 text-medium-emphasis mb-4">
             {{ selectedMatch.whitePlayerName || 'BYE' }} vs {{ selectedMatch.blackPlayerName || 'BYE' }}
