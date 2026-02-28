@@ -100,6 +100,7 @@ The organiser picks one of the three presets. Within each preset they choose the
 2. Optionally re-orders players (for seeding in elimination formats).
 3. Clicks **"Start Tournament"** → pairings for round 1 are generated.
 4. No more players can join after the tournament starts.
+5. Show how many rounds is required
 
 ### 5.4 Play & Report Results
 1. Players see the current round's pairings (who plays whom).
@@ -257,3 +258,4 @@ All endpoints are prefixed with `/api`.
 | 5 | **Elimination engine** | Single & double elimination brackets |
 | 6 | **Real-time updates** | SignalR hub for live score/round changes |
 | 7 | **Polish & deploy** | Mobile UI pass, error handling, Docker image |
+

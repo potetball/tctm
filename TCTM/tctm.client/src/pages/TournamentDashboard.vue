@@ -114,6 +114,33 @@ const timeControlLabel = computed(() => {
   return `${tournament.value.timeControlPreset} · ${tournament.value.timeControlMinutes} min`
 })
 
+const totalRounds = computed(() => {
+  if (!tournament.value || !playerList.value.length) return null
+  const n = playerList.value.length
+  if (n < 2) return null
+  switch (tournament.value.format) {
+    case TournamentFormat.RoundRobin:
+      return n % 2 === 0 ? n - 1 : n
+    case TournamentFormat.Swiss:
+      return Math.ceil(Math.log2(n))
+    case TournamentFormat.SingleElimination:
+      return Math.ceil(Math.log2(n))
+    case TournamentFormat.DoubleElimination:
+      return 2 * Math.ceil(Math.log2(n)) + 1
+    default:
+      return null
+  }
+})
+
+const completedRounds = computed(() => {
+  return roundList.value.filter(r => r.status === 'Completed').length
+})
+
+const roundProgress = computed(() => {
+  if (!totalRounds.value) return 0
+  return Math.round((completedRounds.value / totalRounds.value) * 100)
+})
+
 const resultOptions = [
   { title: 'White wins (1–0)', value: MatchResult.WhiteWin },
   { title: 'Draw (½–½)', value: MatchResult.Draw },
@@ -326,6 +353,40 @@ onMounted(() => {
             >
               Admin
             </v-btn>
+          </div>
+        </div>
+      </v-card>
+
+      <!-- Tournament Progress Card -->
+      <v-card v-if="(isInProgress || isCompleted) && totalRounds" class="pa-5 pb-5 mb-6" variant="outlined" rounded="xl">
+        <div class="d-flex align-center justify-space-between flex-wrap ga-4 mb-3">
+          <h3 class="text-h6 font-weight-bold">
+            <v-icon icon="mdi-chart-timeline-variant" class="mr-1" />
+            Tournament Progress
+          </h3>
+          <v-chip variant="tonal" :color="isCompleted ? 'grey' : 'amber-darken-2'" size="small">
+            {{ completedRounds }} / {{ totalRounds }} rounds
+          </v-chip>
+        </div>
+        <v-progress-linear
+          :model-value="roundProgress"
+          :color="isCompleted ? 'green' : 'amber-darken-2'"
+          height="10"
+          rounded
+          class="mb-3"
+        />
+        <div class="d-flex ga-6 flex-wrap">
+          <div class="text-center">
+            <div class="text-h5 font-weight-bold">{{ totalRounds }}</div>
+            <div class="text-caption text-medium-emphasis">Total Rounds</div>
+          </div>
+          <div class="text-center">
+            <div class="text-h5 font-weight-bold">{{ completedRounds }}</div>
+            <div class="text-caption text-medium-emphasis">Completed</div>
+          </div>
+          <div class="text-center">
+            <div class="text-h5 font-weight-bold">{{ Math.max(0, totalRounds - completedRounds) }}</div>
+            <div class="text-caption text-medium-emphasis">Remaining</div>
           </div>
         </div>
       </v-card>
