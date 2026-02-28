@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { tournaments } from '@/api'
+import logo from '@/assets/tctm-logo.png'
 
 const router = useRouter()
 const inviteCode = ref('')
@@ -65,7 +66,7 @@ async function reauthenticate() {
   <v-container class="d-flex align-center justify-center" style="max-width: 1200px; margin: 0 auto; min-height: 80vh;">
     <v-card max-width="520" width="100%" class="pa-6" elevation="8" rounded="xl">
       <div class="text-center mb-6">
-        <v-icon icon="mdi-chess-queen" size="64" color="amber-darken-2" />
+        <img :src="logo" alt="TCTM Logo" height="164" />
         <h1 class="text-h4 font-weight-bold mt-4">Welcome to TCTM</h1>
         <p class="text-body-1 text-medium-emphasis mt-2">
           Organise and manage small chess tournaments with ease.
