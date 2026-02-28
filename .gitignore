@@ -79,3 +79,11 @@ launchSettings.json
 
 # Rider
 *.sln.iml
+
+# database
+TCTM/**/tctm.db
+TCTM/**/tctm.db-shm
+TCTM/**/tctm.db-wal
+*.db
+*.db-shm
+*.db-wal
