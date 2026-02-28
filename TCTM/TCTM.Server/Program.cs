@@ -1,9 +1,13 @@
 using Microsoft.EntityFrameworkCore;
+using TCTM.Server;
 using TCTM.Server.DataModel;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
+
+builder.Services.Configure<TctmConfiguration>(
+    builder.Configuration.GetSection(TctmConfiguration.SectionName));
 
 builder.Services.AddDbContext<TctmDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));

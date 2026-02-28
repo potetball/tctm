@@ -87,3 +87,4 @@ TCTM/**/tctm.db-wal
 *.db
 *.db-shm
 *.db-wal
+/TCTM/TCTM.Server/Properties/PublishProfiles

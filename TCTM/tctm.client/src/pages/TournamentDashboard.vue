@@ -6,6 +6,7 @@ import {
   players,
   rounds,
   matches,
+  configuration,
   TournamentStatus,
   TournamentFormat,
   MatchResult,
@@ -228,8 +229,20 @@ function canReport(match) {
   return match.whitePlayerId === myPlayerId.value || match.blackPlayerId === myPlayerId.value
 }
 
+const applicationUrl = ref('')
+
+async function fetchConfiguration() {
+  try {
+    const config = await configuration.getConfiguration()
+    applicationUrl.value = config.applicationUrl
+  } catch {
+    applicationUrl.value = window.location.origin
+  }
+}
+
 function copyInviteLink() {
-  const url = `${window.location.origin}/t/${slug}`
+  const baseUrl = applicationUrl.value || window.location.origin
+  const url = `${baseUrl}/t/${slug}`
   navigator.clipboard.writeText(url)
 }
 
@@ -238,7 +251,10 @@ function copyToken() {
   tokenCopied.value = true
 }
 
-onMounted(loadData)
+onMounted(() => {
+  fetchConfiguration()
+  loadData()
+})
 </script>
 
 <template>
