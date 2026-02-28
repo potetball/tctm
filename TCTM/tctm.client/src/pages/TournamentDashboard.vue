@@ -222,11 +222,16 @@ function resultLabel(result) {
   return result
 }
 
-function canReport(match) {
-  if (match.result && !isAdmin.value) return false
+function canReport(match, round) {
+  // Only allow reporting for in-progress rounds
+  if (round.status !== 'InProgress') return false
   if (isAdmin.value) return true
   if (!myPlayerId.value) return false
-  return match.whitePlayerId === myPlayerId.value || match.blackPlayerId === myPlayerId.value
+  const isParticipant = match.whitePlayerId === myPlayerId.value || match.blackPlayerId === myPlayerId.value
+  if (!isParticipant) return false
+  // Allow reporting if no result yet, or if this player hasn't reported yet (for dispute handling)
+  if (!match.result) return true
+  return match.reportedBy !== myPlayerId.value
 }
 
 const applicationUrl = ref('')
@@ -458,7 +463,7 @@ onMounted(() => {
                 </td>
                 <td class="text-center">
                   <v-btn
-                    v-if="canReport(match)"
+                    v-if="canReport(match, round)"
                     size="small"
                     variant="tonal"
                     color="amber-darken-2"

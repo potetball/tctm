@@ -11,6 +11,7 @@ public record MatchDto(
     Guid? BlackPlayerId,
     string? BlackPlayerName,
     MatchResult? Result,
+    Guid? ReportedBy,
     bool Disputed,
     Bracket? Bracket
 );

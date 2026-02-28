@@ -15,6 +15,7 @@ public static class MatchMappings
             match.BlackPlayerId,
             match.BlackPlayer?.DisplayName,
             match.Result,
+            match.ReportedBy,
             match.Disputed,
             match.Bracket
         );
