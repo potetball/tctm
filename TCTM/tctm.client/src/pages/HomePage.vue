@@ -2,9 +2,11 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { tournaments } from '@/api'
+import { useTournamentStore } from '@/composables/useTournamentStore'
 import logo from '@/assets/tctm-logo.png'
 
 const router = useRouter()
+const { tournaments: knownTournaments, addTournament, removeTournament } = useTournamentStore()
 const inviteCode = ref('')
 const loading = ref(false)
 const error = ref('')
@@ -50,6 +52,9 @@ async function reauthenticate() {
     }
     localStorage.setItem('tctm_players', JSON.stringify(playerData))
 
+    // Register in tournament store (name will be updated when dashboard loads)
+    addTournament(result.slug, result.slug, 'player')
+
     // Navigate to the tournament
     router.push({ name: 'tournament', params: { slug: result.slug } })
   } catch (err) {
@@ -63,7 +68,51 @@ async function reauthenticate() {
 </script>
 
 <template>
-  <v-container class="d-flex align-center justify-center" style="max-width: 1200px; margin: 0 auto; min-height: 80vh;">
+  <v-container class="d-flex flex-column align-center justify-center" style="max-width: 1200px; margin: 0 auto; min-height: 80vh;">
+    <!-- My Tournaments quick-access -->
+    <v-card
+      v-if="knownTournaments.length"
+      max-width="520"
+      width="100%"
+      class="pa-4 mb-4"
+      elevation="4"
+      rounded="xl"
+    >
+      <h3 class="text-subtitle-1 font-weight-bold mb-2">
+        <v-icon icon="mdi-trophy-outline" class="mr-1" />
+        My Tournaments
+      </h3>
+      <v-list density="compact" nav>
+        <v-list-item
+          v-for="t in knownTournaments"
+          :key="t.slug"
+          @click="router.push({ name: 'tournament', params: { slug: t.slug } })"
+        >
+          <template #prepend>
+            <v-icon
+              :icon="t.role === 'admin' ? 'mdi-shield-crown-outline' : t.role === 'player' ? 'mdi-account-check' : 'mdi-eye-outline'"
+              size="small"
+              class="mr-2"
+            />
+          </template>
+          <v-list-item-title>{{ t.name }}</v-list-item-title>
+          <v-list-item-subtitle class="text-caption">
+            {{ t.role }} · {{ t.slug }}
+          </v-list-item-subtitle>
+          <template #append>
+            <v-btn
+              icon="mdi-close"
+              variant="text"
+              size="x-small"
+              color="red-lighten-1"
+              title="Remove from list"
+              @click.stop="removeTournament(t.slug)"
+            />
+          </template>
+        </v-list-item>
+      </v-list>
+    </v-card>
+
     <v-card max-width="520" width="100%" class="pa-6" elevation="8" rounded="xl">
       <div class="text-center mb-6">
         <img :src="logo" alt="TCTM Logo" height="164" />

@@ -35,6 +35,11 @@ const router = createRouter({
       name: 'admin',
       component: () => import('@/pages/AdminPage.vue'),
     },
+    {
+      path: '/t/:slug/game/:matchId',
+      name: 'live-game',
+      component: () => import('@/pages/LiveGamePage.vue'),
+    },
   ],
 })
 

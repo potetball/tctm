@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   tournaments,
@@ -11,10 +11,13 @@ import {
   TournamentFormat,
   MatchResult,
 } from '@/api'
+import { useTournamentStore } from '@/composables/useTournamentStore'
+import { useTournamentHub } from '@/composables/useTournamentHub'
 
 const route = useRoute()
 const router = useRouter()
-const slug = route.params.slug
+const { addTournament: registerTournament } = useTournamentStore()
+const slug = computed(() => route.params.slug)
 
 // --- State ---
 const tournament = ref(null)
@@ -48,25 +51,25 @@ const localStorageVersion = ref(0)
 const isAdmin = computed(() => {
   localStorageVersion.value // dependency trigger
   const tokens = JSON.parse(localStorage.getItem('tctm_admin_tokens') || '{}')
-  return !!tokens[slug]
+  return !!tokens[slug.value]
 })
 
 const adminToken = computed(() => {
   localStorageVersion.value // dependency trigger
   const tokens = JSON.parse(localStorage.getItem('tctm_admin_tokens') || '{}')
-  return tokens[slug] || null
+  return tokens[slug.value] || null
 })
 
 const myPlayerId = computed(() => {
   localStorageVersion.value // dependency trigger
   const playerData = JSON.parse(localStorage.getItem('tctm_players') || '{}')
-  return playerData[slug]?.playerId || null
+  return playerData[slug.value]?.playerId || null
 })
 
 const myPlayerToken = computed(() => {
   localStorageVersion.value // dependency trigger
   const playerData = JSON.parse(localStorage.getItem('tctm_players') || '{}')
-  return playerData[slug]?.playerToken || null
+  return playerData[slug.value]?.playerToken || null
 })
 
 const isJoined = computed(() => !!myPlayerId.value)
@@ -153,14 +156,19 @@ async function loadData() {
   error.value = ''
 
   try {
+    const s = slug.value
     const [t, p, r] = await Promise.all([
-      tournaments.getTournament(slug),
-      players.listPlayers(slug),
-      rounds.listRounds(slug).catch(() => []),
+      tournaments.getTournament(s),
+      players.listPlayers(s),
+      rounds.listRounds(s).catch(() => []),
     ])
     tournament.value = t
     playerList.value = p
     roundList.value = r
+
+    // Register in tournament store with appropriate role
+    const role = isAdmin.value ? 'admin' : isJoined.value ? 'player' : 'spectator'
+    registerTournament(s, t.name, role)
   } catch (err) {
     error.value = err.message || 'Failed to load tournament.'
   } finally {
@@ -175,20 +183,22 @@ async function joinTournament() {
   joinError.value = ''
 
   try {
-    const result = await tournaments.joinTournament(slug, {
+    const s = slug.value
+    const result = await tournaments.joinTournament(s, {
       inviteCode: tournament.value.inviteCode,
       displayName: displayName.value.trim(),
     })
 
     // Store player credentials
     const playerData = JSON.parse(localStorage.getItem('tctm_players') || '{}')
-    playerData[slug] = {
+    playerData[s] = {
       playerId: result.playerId,
       playerToken: result.playerToken,
       displayName: displayName.value.trim(),
     }
     localStorage.setItem('tctm_players', JSON.stringify(playerData))
     localStorageVersion.value++
+    registerTournament(s, tournament.value.name, 'player')
 
     joinDialog.value = false
     displayName.value = ''
@@ -197,8 +207,6 @@ async function joinTournament() {
     joinedToken.value = result.playerToken
     tokenCopied.value = false
     tokenDialog.value = true
-
-    await loadData()
   } catch (err) {
     joinError.value = err.body?.error || err.message || 'Failed to join tournament.'
   } finally {
@@ -222,18 +230,17 @@ async function submitResult() {
   try {
     const token = isAdmin.value ? adminToken.value : myPlayerToken.value
     if (isAdmin.value) {
-      await matches.overrideResult(slug, selectedMatch.value.id, {
+      await matches.overrideResult(slug.value, selectedMatch.value.id, {
         result: selectedResult.value,
         adminToken: token,
       })
     } else {
-      await matches.reportResult(slug, selectedMatch.value.id, {
+      await matches.reportResult(slug.value, selectedMatch.value.id, {
         result: selectedResult.value,
         token,
       })
     }
     resultDialog.value = false
-    await loadData()
   } catch (err) {
     reportError.value = err.body?.error || err.message || 'Failed to report result.'
   } finally {
@@ -274,7 +281,7 @@ async function fetchConfiguration() {
 
 function copyInviteLink() {
   const baseUrl = applicationUrl.value || window.location.origin
-  const url = `${baseUrl}/t/${slug}`
+  const url = `${baseUrl}/t/${slug.value}`
   navigator.clipboard.writeText(url)
 }
 
@@ -283,9 +290,75 @@ function copyToken() {
   tokenCopied.value = true
 }
 
-onMounted(() => {
+watch(slug, () => {
   fetchConfiguration()
   loadData()
+}, { immediate: true })
+
+// --- SignalR real-time updates ---
+const hub = useTournamentHub()
+const unsubs = []
+
+watch(slug, async (newSlug) => {
+  if (newSlug) {
+    await hub.joinTournament(newSlug)
+  }
+}, { immediate: true })
+
+// Player joined: add to list in-place
+unsubs.push(hub.on('PlayerJoined', (player) => {
+  if (!playerList.value.some(p => p.id === player.id)) {
+    playerList.value = [...playerList.value, player]
+  }
+}))
+
+// Player removed: remove from list in-place
+unsubs.push(hub.on('PlayerRemoved', (playerId) => {
+  playerList.value = playerList.value.filter(p => p.id !== playerId)
+}))
+
+// Tournament started: update status and reload rounds
+unsubs.push(hub.on('TournamentStarted', (updatedTournament) => {
+  tournament.value = updatedTournament
+}))
+
+// New round created: add to round list
+unsubs.push(hub.on('RoundCreated', (round) => {
+  const idx = roundList.value.findIndex(r => r.id === round.id)
+  if (idx >= 0) {
+    roundList.value[idx] = round
+  } else {
+    roundList.value = [...roundList.value, round]
+  }
+}))
+
+// Round completed: update round and refresh standings link
+unsubs.push(hub.on('RoundCompleted', (round, _standings) => {
+  const idx = roundList.value.findIndex(r => r.id === round.id)
+  if (idx >= 0) {
+    roundList.value[idx] = round
+  }
+}))
+
+// Match result updated: update match in the relevant round
+unsubs.push(hub.on('MatchUpdated', (match) => {
+  for (const round of roundList.value) {
+    const idx = round.matches.findIndex(m => m.id === match.id)
+    if (idx >= 0) {
+      round.matches[idx] = match
+      break
+    }
+  }
+}))
+
+// Seed order updated: replace player list
+unsubs.push(hub.on('SeedOrderUpdated', (updatedPlayers) => {
+  playerList.value = updatedPlayers
+}))
+
+onUnmounted(() => {
+  unsubs.forEach(fn => fn())
+  hub.leaveTournament()
 })
 </script>
 
@@ -523,15 +596,27 @@ onMounted(() => {
                   </v-chip>
                 </td>
                 <td class="text-center">
-                  <v-btn
-                    v-if="canReport(match, round)"
-                    size="small"
-                    variant="tonal"
-                    color="amber-darken-2"
-                    @click="openResultDialog(match)"
-                  >
-                    {{ match.result ? 'Edit' : 'Report' }}
-                  </v-btn>
+                  <div class="d-flex align-center justify-center ga-1">
+                    <v-btn
+                      v-if="isInProgress && match.whitePlayerId && match.blackPlayerId"
+                      size="small"
+                      variant="tonal"
+                      color="green"
+                      prepend-icon="mdi-chess-king"
+                      @click="router.push({ name: 'live-game', params: { slug, matchId: match.id } })"
+                    >
+                      Live Game
+                    </v-btn>
+                    <v-btn
+                      v-if="canReport(match, round)"
+                      size="small"
+                      variant="tonal"
+                      color="amber-darken-2"
+                      @click="openResultDialog(match)"
+                    >
+                      {{ match.result ? 'Edit' : 'Report' }}
+                    </v-btn>
+                  </div>
                 </td>
               </tr>
             </tbody>

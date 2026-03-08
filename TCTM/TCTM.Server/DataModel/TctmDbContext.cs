@@ -9,6 +9,7 @@ public class TctmDbContext(DbContextOptions<TctmDbContext> options) : DbContext(
     public DbSet<Round> Rounds => Set<Round>();
     public DbSet<Match> Matches => Set<Match>();
     public DbSet<Standing> Standings => Set<Standing>();
+    public DbSet<LiveGame> LiveGames => Set<LiveGame>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -77,6 +78,18 @@ public class TctmDbContext(DbContextOptions<TctmDbContext> options) : DbContext(
             e.HasOne(s => s.Player)
              .WithMany()
              .HasForeignKey(s => s.PlayerId)
+             .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // LiveGame
+        modelBuilder.Entity<LiveGame>(e =>
+        {
+            e.HasKey(lg => lg.Id);
+            e.HasIndex(lg => lg.MatchId).IsUnique();
+            e.Property(lg => lg.Status).HasConversion<string>();
+            e.HasOne(lg => lg.Match)
+             .WithOne(m => m.LiveGame)
+             .HasForeignKey<LiveGame>(lg => lg.MatchId)
              .OnDelete(DeleteBehavior.Cascade);
         });
     }

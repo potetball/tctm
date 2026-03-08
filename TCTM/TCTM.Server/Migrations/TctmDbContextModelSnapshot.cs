@@ -17,6 +17,46 @@ namespace TCTM.Server.Migrations
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.3");
 
+            modelBuilder.Entity("TCTM.Server.DataModel.LiveGame", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("BlackClockMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("InitialClockMs")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("MoveData")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("WhiteClockMs")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatchId")
+                        .IsUnique();
+
+                    b.ToTable("LiveGames");
+                });
+
             modelBuilder.Entity("TCTM.Server.DataModel.Match", b =>
                 {
                     b.Property<Guid>("Id")
@@ -194,6 +234,17 @@ namespace TCTM.Server.Migrations
                     b.ToTable("Tournaments");
                 });
 
+            modelBuilder.Entity("TCTM.Server.DataModel.LiveGame", b =>
+                {
+                    b.HasOne("TCTM.Server.DataModel.Match", "Match")
+                        .WithOne("LiveGame")
+                        .HasForeignKey("TCTM.Server.DataModel.LiveGame", "MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Match");
+                });
+
             modelBuilder.Entity("TCTM.Server.DataModel.Match", b =>
                 {
                     b.HasOne("TCTM.Server.DataModel.Player", "BlackPlayer")
@@ -258,6 +309,11 @@ namespace TCTM.Server.Migrations
                     b.Navigation("Player");
 
                     b.Navigation("Tournament");
+                });
+
+            modelBuilder.Entity("TCTM.Server.DataModel.Match", b =>
+                {
+                    b.Navigation("LiveGame");
                 });
 
             modelBuilder.Entity("TCTM.Server.DataModel.Player", b =>

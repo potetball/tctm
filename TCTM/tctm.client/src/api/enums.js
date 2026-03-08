@@ -44,3 +44,11 @@ export const Bracket = Object.freeze({
   Winners: 'Winners',
   Losers: 'Losers',
 })
+
+/** @enum {string} */
+export const LiveGameStatus = Object.freeze({
+  NotStarted: 'NotStarted',
+  InProgress: 'InProgress',
+  Completed: 'Completed',
+  Aborted: 'Aborted',
+})

@@ -41,3 +41,11 @@ public enum Bracket
     Winners,
     Losers
 }
+
+public enum LiveGameStatus
+{
+    NotStarted,
+    InProgress,
+    Completed,
+    Aborted
+}

@@ -14,4 +14,5 @@ public class Match
     public Round Round { get; set; } = null!;
     public Player? WhitePlayer { get; set; }
     public Player? BlackPlayer { get; set; }
+    public LiveGame? LiveGame { get; set; }
 }

@@ -1,4 +1,4 @@
-import { get, put, del, adminHeader } from './httpClient'
+import { get, post, put, del, adminHeader } from './httpClient'
 
 /**
  * GET /api/tournaments/{slug}/players
@@ -31,6 +31,19 @@ export function removePlayer(slug, playerId, adminToken) {
  */
 export function setSeedOrder(slug, playerIds, adminToken) {
   return put(`/tournaments/${slug}/players/seed`, { playerIds }, {
+    headers: adminHeader(adminToken),
+  })
+}
+
+/**
+ * POST /api/tournaments/{slug}/players/{id}/reset-token
+ * @param {string} slug
+ * @param {string} playerId
+ * @param {string} adminToken
+ * @returns {Promise<{ playerId: string, displayName: string, playerToken: string }>}
+ */
+export function resetPlayerToken(slug, playerId, adminToken) {
+  return post(`/tournaments/${slug}/players/${playerId}/reset-token`, null, {
     headers: adminHeader(adminToken),
   })
 }

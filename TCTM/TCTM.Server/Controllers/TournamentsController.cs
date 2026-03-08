@@ -10,7 +10,7 @@ namespace TCTM.Server.Controllers;
 
 [ApiController]
 [Route("api/tournaments")]
-public class TournamentsController(TctmDbContext db) : ControllerBase
+public class TournamentsController(TctmDbContext db, TournamentNotificationService notifier) : ControllerBase
 {
     /// <summary>POST /api/tournaments — Create a new tournament.</summary>
     [HttpPost]
@@ -107,6 +107,8 @@ public class TournamentsController(TctmDbContext db) : ControllerBase
         db.Players.Add(player);
         await db.SaveChangesAsync();
 
+        await notifier.PlayerJoined(slug, player.ToDto());
+
         return Ok(new JoinTournamentResponse(player.Id, playerToken));
     }
 
@@ -162,6 +164,8 @@ public class TournamentsController(TctmDbContext db) : ControllerBase
             db.Matches.Add(match);
 
         await db.SaveChangesAsync();
+
+        await notifier.TournamentStarted(slug, tournament.ToDto());
 
         return Ok(tournament.ToDto());
     }

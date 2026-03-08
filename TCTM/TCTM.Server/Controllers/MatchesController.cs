@@ -3,12 +3,13 @@ using Microsoft.EntityFrameworkCore;
 using TCTM.Server.DataModel;
 using TCTM.Server.Dto;
 using TCTM.Server.Mappings;
+using TCTM.Server.Services;
 
 namespace TCTM.Server.Controllers;
 
 [ApiController]
 [Route("api/tournaments/{slug}/matches")]
-public class MatchesController(TctmDbContext db) : ControllerBase
+public class MatchesController(TctmDbContext db, TournamentNotificationService notifier) : ControllerBase
 {
     /// <summary>POST /api/tournaments/{slug}/matches/{id}/result — Report a match result (player or admin).</summary>
     [HttpPost("{id:guid}/result")]
@@ -69,6 +70,8 @@ public class MatchesController(TctmDbContext db) : ControllerBase
 
         await db.SaveChangesAsync();
 
+        await notifier.MatchUpdated(slug, match.ToDto());
+
         return Ok(match.ToDto());
     }
 
@@ -98,6 +101,8 @@ public class MatchesController(TctmDbContext db) : ControllerBase
         match.Disputed = false;
 
         await db.SaveChangesAsync();
+
+        await notifier.MatchUpdated(slug, match.ToDto());
 
         return Ok(match.ToDto());
     }

@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { tournaments, rounds, TournamentFormat, MatchResult } from '@/api'
+import { useTournamentHub } from '@/composables/useTournamentHub'
 
 const route = useRoute()
 const router = useRouter()
-const slug = route.params.slug
+const slug = computed(() => route.params.slug)
 
 const tournament = ref(null)
 const roundList = ref([])
@@ -51,9 +52,10 @@ async function loadData() {
   error.value = ''
 
   try {
+    const s = slug.value
     const [t, r] = await Promise.all([
-      tournaments.getTournament(slug),
-      rounds.listRounds(slug).catch(() => []),
+      tournaments.getTournament(s),
+      rounds.listRounds(s).catch(() => []),
     ])
     tournament.value = t
     roundList.value = r
@@ -63,7 +65,7 @@ async function loadData() {
       t.format !== TournamentFormat.SingleElimination &&
       t.format !== TournamentFormat.DoubleElimination
     ) {
-      router.replace({ name: 'tournament', params: { slug } })
+      router.replace({ name: 'tournament', params: { slug: s } })
     }
   } catch (err) {
     error.value = err.message || 'Failed to load bracket.'
@@ -72,7 +74,51 @@ async function loadData() {
   }
 }
 
-onMounted(loadData)
+watch(slug, loadData, { immediate: true })
+
+// --- SignalR real-time updates ---
+const hub = useTournamentHub()
+const unsubs = []
+
+watch(slug, async (newSlug) => {
+  if (newSlug) {
+    await hub.joinTournament(newSlug)
+  }
+}, { immediate: true })
+
+// New round created: add to round list
+unsubs.push(hub.on('RoundCreated', (round) => {
+  const idx = roundList.value.findIndex(r => r.id === round.id)
+  if (idx >= 0) {
+    roundList.value[idx] = round
+  } else {
+    roundList.value = [...roundList.value, round]
+  }
+}))
+
+// Round completed: update round in-place
+unsubs.push(hub.on('RoundCompleted', (round, _standings) => {
+  const idx = roundList.value.findIndex(r => r.id === round.id)
+  if (idx >= 0) {
+    roundList.value[idx] = round
+  }
+}))
+
+// Match result updated: update match in-place
+unsubs.push(hub.on('MatchUpdated', (match) => {
+  for (const round of roundList.value) {
+    const idx = round.matches.findIndex(m => m.id === match.id)
+    if (idx >= 0) {
+      round.matches[idx] = match
+      break
+    }
+  }
+}))
+
+onUnmounted(() => {
+  unsubs.forEach(fn => fn())
+  hub.leaveTournament()
+})
 </script>
 
 <template>

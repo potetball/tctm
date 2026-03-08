@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using TCTM.Server;
 using TCTM.Server.DataModel;
+using TCTM.Server.Hubs;
+using TCTM.Server.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -22,6 +24,16 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
+
+builder.Services.AddSignalR()
+    .AddJsonProtocol(options =>
+    {
+        options.PayloadSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+    });
+builder.Services.AddSingleton<TournamentNotificationService>();
+builder.Services.AddSingleton<GamePresenceTracker>();
+builder.Services.AddScoped<LiveGameService>();
+builder.Services.AddHostedService<ClockMonitorService>();
 
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
@@ -56,6 +68,9 @@ app.UseCors();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHub<TournamentHub>("/hubs/tournament");
+app.MapHub<LiveGameHub>("/liveGameHub");
 
 app.MapFallbackToFile("/index.html");
 

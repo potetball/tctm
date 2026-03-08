@@ -9,7 +9,7 @@ namespace TCTM.Server.Controllers;
 
 [ApiController]
 [Route("api/tournaments/{slug}/rounds")]
-public class RoundsController(TctmDbContext db) : ControllerBase
+public class RoundsController(TctmDbContext db, TournamentNotificationService notifier) : ControllerBase
 {
     /// <summary>GET /api/tournaments/{slug}/rounds — List rounds with matches.</summary>
     [HttpGet]
@@ -74,6 +74,8 @@ public class RoundsController(TctmDbContext db) : ControllerBase
             .Include(r => r.Matches).ThenInclude(m => m.BlackPlayer)
             .FirstAsync(r => r.Id == round.Id);
 
+        await notifier.RoundCreated(slug, created.ToDto());
+
         return CreatedAtAction(nameof(List), new { slug }, created.ToDto());
     }
 
@@ -136,7 +138,11 @@ public class RoundsController(TctmDbContext db) : ControllerBase
             .ThenByDescending(s => s.Buchholz)
             .ToListAsync();
 
-        return Ok(result.Select(s => s.ToDto()).ToList());
+        var standingsDto = result.Select(s => s.ToDto()).ToList();
+
+        await notifier.RoundCompleted(slug, round.ToDto(), standingsDto);
+
+        return Ok(standingsDto);
     }
 
     // --- Standings calculation helpers ---

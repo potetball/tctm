@@ -52,6 +52,16 @@ export default defineConfig({
             '^/api': {
                 target,
                 secure: false
+            },
+            '^/hubs': {
+                target,
+                secure: false,
+                ws: true
+            },
+            '^/liveGameHub': {
+                target,
+                secure: false,
+                ws: true
             }
         },
         port: parseInt(env.DEV_SERVER_PORT || '49880'),

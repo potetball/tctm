@@ -1,11 +1,12 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { standings, tournaments, TournamentFormat } from '@/api'
+import { useTournamentHub } from '@/composables/useTournamentHub'
 
 const route = useRoute()
 const router = useRouter()
-const slug = route.params.slug
+const slug = computed(() => route.params.slug)
 
 const tournament = ref(null)
 const standingsList = ref([])
@@ -26,9 +27,10 @@ async function loadData() {
   error.value = ''
 
   try {
+    const sv = slug.value
     const [t, s] = await Promise.all([
-      tournaments.getTournament(slug),
-      standings.getStandings(slug),
+      tournaments.getTournament(sv),
+      standings.getStandings(sv),
     ])
     tournament.value = t
     standingsList.value = s
@@ -39,7 +41,34 @@ async function loadData() {
   }
 }
 
-onMounted(loadData)
+watch(slug, loadData, { immediate: true })
+
+// --- SignalR real-time updates ---
+const hub = useTournamentHub()
+const unsubs = []
+
+watch(slug, async (newSlug) => {
+  if (newSlug) {
+    await hub.joinTournament(newSlug)
+  }
+}, { immediate: true })
+
+// Round completed: update standings in-place
+unsubs.push(hub.on('RoundCompleted', (_round, updatedStandings) => {
+  if (updatedStandings) {
+    standingsList.value = updatedStandings
+  }
+}))
+
+// Tournament started: update tournament data
+unsubs.push(hub.on('TournamentStarted', (updatedTournament) => {
+  tournament.value = updatedTournament
+}))
+
+onUnmounted(() => {
+  unsubs.forEach(fn => fn())
+  hub.leaveTournament()
+})
 </script>
 
 <template>

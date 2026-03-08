@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, watch, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   tournaments,
@@ -10,10 +10,12 @@ import {
   MatchResult,
 } from '@/api'
 import RoundScoreboard from '@/components/RoundScoreboard.vue'
+import LobbyPanel from '@/components/LobbyPanel.vue'
+import { useTournamentHub } from '@/composables/useTournamentHub'
 
 const route = useRoute()
 const router = useRouter()
-const slug = route.params.slug
+const slug = computed(() => route.params.slug)
 
 // --- State ---
 const tournament = ref(null)
@@ -32,11 +34,6 @@ const overrideResult = ref(null)
 const overrideLoading = ref(false)
 const overrideError = ref('')
 
-// Remove player confirm dialog
-const removeDialog = ref(false)
-const removePlayer = ref(null)
-const removeLoading = ref(false)
-
 // Scoreboard after round completion
 const scoreboardVisible = ref(false)
 const scoreboardStandings = ref([])
@@ -45,7 +42,7 @@ const completedRoundNumber = ref(0)
 // --- Computed ---
 const adminToken = computed(() => {
   const tokens = JSON.parse(localStorage.getItem('tctm_admin_tokens') || '{}')
-  return tokens[slug] || null
+  return tokens[slug.value] || null
 })
 
 const isAuthorized = computed(() => !!adminToken.value)
@@ -78,10 +75,11 @@ async function loadData() {
   error.value = ''
 
   try {
+    const s = slug.value
     const [t, p, r] = await Promise.all([
-      tournaments.getTournament(slug),
-      players.listPlayers(slug),
-      rounds.listRounds(slug).catch(() => []),
+      tournaments.getTournament(s),
+      players.listPlayers(s),
+      rounds.listRounds(s).catch(() => []),
     ])
     tournament.value = t
     playerList.value = p
@@ -99,9 +97,8 @@ async function startTournament() {
   actionSuccess.value = ''
 
   try {
-    await tournaments.startTournament(slug, adminToken.value)
+    await tournaments.startTournament(slug.value, adminToken.value)
     actionSuccess.value = 'Tournament started!'
-    await loadData()
   } catch (err) {
     actionError.value = err.body?.error || err.message || 'Failed to start tournament.'
   } finally {
@@ -115,9 +112,8 @@ async function generateNextRound() {
   actionSuccess.value = ''
 
   try {
-    await rounds.generateNextRound(slug, adminToken.value)
+    await rounds.generateNextRound(slug.value, adminToken.value)
     actionSuccess.value = 'Next round generated!'
-    await loadData()
   } catch (err) {
     actionError.value = err.body?.error || err.message || 'Failed to generate next round.'
   } finally {
@@ -133,11 +129,10 @@ async function completeCurrentRound() {
   actionSuccess.value = ''
 
   try {
-    const updatedStandings = await rounds.completeRound(slug, currentRound.value.roundNumber, adminToken.value)
+    const updatedStandings = await rounds.completeRound(slug.value, currentRound.value.roundNumber, adminToken.value)
     completedRoundNumber.value = currentRound.value.roundNumber
     scoreboardStandings.value = updatedStandings
     actionSuccess.value = `Round ${currentRound.value.roundNumber} completed!`
-    await loadData()
     scoreboardVisible.value = true
   } catch (err) {
     actionError.value = err.body?.error || err.message || 'Failed to complete round.'
@@ -160,36 +155,15 @@ async function submitOverride() {
   overrideError.value = ''
 
   try {
-    await matches.overrideResult(slug, overrideMatch.value.id, {
+    await matches.overrideResult(slug.value, overrideMatch.value.id, {
       result: overrideResult.value,
       adminToken: adminToken.value,
     })
     overrideDialog.value = false
-    await loadData()
   } catch (err) {
     overrideError.value = err.body?.error || err.message || 'Failed to override result.'
   } finally {
     overrideLoading.value = false
-  }
-}
-
-function confirmRemovePlayer(player) {
-  removePlayer.value = player
-  removeDialog.value = true
-}
-
-async function doRemovePlayer() {
-  if (!removePlayer.value) return
-
-  removeLoading.value = true
-  try {
-    await players.removePlayer(slug, removePlayer.value.id, adminToken.value)
-    removeDialog.value = false
-    await loadData()
-  } catch (err) {
-    actionError.value = err.body?.error || err.message || 'Failed to remove player.'
-  } finally {
-    removeLoading.value = false
   }
 }
 
@@ -201,7 +175,73 @@ function resultLabel(result) {
   return result
 }
 
-onMounted(loadData)
+watch(slug, loadData, { immediate: true })
+
+// --- SignalR real-time updates ---
+const hub = useTournamentHub()
+const unsubs = []
+
+watch(slug, async (newSlug) => {
+  if (newSlug) {
+    await hub.joinTournament(newSlug)
+  }
+}, { immediate: true })
+
+// Player joined: add to list in-place
+unsubs.push(hub.on('PlayerJoined', (player) => {
+  if (!playerList.value.some(p => p.id === player.id)) {
+    playerList.value = [...playerList.value, player]
+  }
+}))
+
+// Player removed: remove from list in-place
+unsubs.push(hub.on('PlayerRemoved', (playerId) => {
+  playerList.value = playerList.value.filter(p => p.id !== playerId)
+}))
+
+// Tournament started: update status
+unsubs.push(hub.on('TournamentStarted', (updatedTournament) => {
+  tournament.value = updatedTournament
+}))
+
+// New round created: add to round list
+unsubs.push(hub.on('RoundCreated', (round) => {
+  const idx = roundList.value.findIndex(r => r.id === round.id)
+  if (idx >= 0) {
+    roundList.value[idx] = round
+  } else {
+    roundList.value = [...roundList.value, round]
+  }
+}))
+
+// Round completed: update round in-place
+unsubs.push(hub.on('RoundCompleted', (round, _standings) => {
+  const idx = roundList.value.findIndex(r => r.id === round.id)
+  if (idx >= 0) {
+    roundList.value[idx] = round
+  }
+}))
+
+// Match result updated: update match in the relevant round
+unsubs.push(hub.on('MatchUpdated', (match) => {
+  for (const round of roundList.value) {
+    const idx = round.matches.findIndex(m => m.id === match.id)
+    if (idx >= 0) {
+      round.matches[idx] = match
+      break
+    }
+  }
+}))
+
+// Seed order updated: replace player list
+unsubs.push(hub.on('SeedOrderUpdated', (updatedPlayers) => {
+  playerList.value = updatedPlayers
+}))
+
+onUnmounted(() => {
+  unsubs.forEach(fn => fn())
+  hub.leaveTournament()
+})
 </script>
 
 <template>
@@ -293,35 +333,13 @@ onMounted(loadData)
           </div>
 
           <!-- Player Management (lobby only) -->
-          <template v-if="isLobby">
-            <h3 class="text-h6 font-weight-bold mb-3">
-              <v-icon icon="mdi-account-group" class="mr-1" />
-              Players ({{ playerList.length }})
-            </h3>
-
-            <v-list v-if="playerList.length" density="compact" class="mb-6">
-              <v-list-item
-                v-for="player in playerList"
-                :key="player.id"
-                :title="player.displayName"
-                prepend-icon="mdi-account"
-              >
-                <template #append>
-                  <v-chip v-if="player.seed" size="x-small" variant="outlined" class="mr-2">
-                    Seed #{{ player.seed }}
-                  </v-chip>
-                  <v-btn
-                    icon="mdi-close"
-                    size="x-small"
-                    variant="text"
-                    color="red"
-                    @click="confirmRemovePlayer(player)"
-                  />
-                </template>
-              </v-list-item>
-            </v-list>
-            <p v-else class="text-body-2 text-medium-emphasis mb-6">No players yet.</p>
-          </template>
+          <LobbyPanel
+            v-if="isLobby"
+            :player-list="playerList"
+            :slug="slug"
+            :admin-token="adminToken"
+            @player-removed="() => {}"
+          />
 
           <!-- Rounds & Match Overrides -->
           <template v-if="roundList.length">
@@ -434,19 +452,5 @@ onMounted(loadData)
       :round-number="completedRoundNumber"
     />
 
-    <!-- Remove Player Dialog -->
-    <v-dialog v-model="removeDialog" max-width="380" persistent>
-      <v-card class="pa-6" rounded="xl">
-        <h3 class="text-h6 font-weight-bold mb-2">Remove Player</h3>
-        <p class="text-body-2 mb-4">
-          Are you sure you want to remove <strong>{{ removePlayer?.displayName }}</strong>?
-        </p>
-        <div class="d-flex ga-2">
-          <v-btn variant="text" @click="removeDialog = false">Cancel</v-btn>
-          <v-spacer />
-          <v-btn color="red" :loading="removeLoading" @click="doRemovePlayer">Remove</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
   </v-container>
 </template>

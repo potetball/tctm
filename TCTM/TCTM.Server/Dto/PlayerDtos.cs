@@ -11,3 +11,10 @@ public record PlayerDto(
 public record SetSeedOrderRequest(
     List<Guid> PlayerIds
 );
+
+// POST /api/tournaments/{slug}/players/{id}/reset-token
+public record ResetTokenResponse(
+    Guid PlayerId,
+    string DisplayName,
+    string PlayerToken
+);
