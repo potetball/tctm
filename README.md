@@ -43,6 +43,38 @@ npm install
 cd ..
 ```
 
+### Create launch settings
+
+Create the file `TCTM.Server/Properties/launchSettings.json` with the following content (it is not checked in to source control):
+
+```json
+{
+  "$schema": "https://json.schemastore.org/launchsettings.json",
+  "profiles": {
+    "http": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5081",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.SpaProxy"
+      }
+    },
+    "https": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "https://localhost:7182;http://localhost:5081",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ASPNETCORE_HOSTINGSTARTUPASSEMBLIES": "Microsoft.AspNetCore.SpaProxy"
+      }
+    }
+  }
+}
+```
+
 ### Run the application
 
 The ASP.NET project is configured to launch the Vite dev server automatically via SPA proxy, so a single command starts both the backend and frontend:
@@ -52,7 +84,7 @@ cd TCTM.Server
 dotnet run
 ```
 
-The app will be available at the URL shown in the console (typically `https://localhost:7xxx`). The database is created automatically on first run via EF Core migrations.
+The app will be available at `https://localhost:7182` (or `http://localhost:5081`). The database is created automatically on first run via EF Core migrations.
 
 ### Run frontend only (standalone)
 
