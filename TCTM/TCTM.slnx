@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Solution items/">
+    <File Path="../README.md" />
     <File Path="chessboardsspecification.md" />
     <File Path="livechessgamespecification.md" />
     <File Path="specifications.md" />

@@ -6,19 +6,22 @@ A lightweight web application for organising and running small chess tournaments
 
 ## Features
 
+- **In-app live chess** — play games directly in the browser with a real-time board, move validation, and server-enforced clocks
 - **Multiple formats** — Round Robin, Swiss, Single Elimination, Double Elimination
 - **No accounts needed** — players join via invite code and are identified by tokens stored in local storage
 - **Live standings** — results and standings update in real time via SignalR
 - **Time control presets** — Bullet, Blitz, and Rapid with configurable minutes
+- **Draw offers & resignation** — full in-game controls; organiser can abort games
 - **Mobile-friendly** — responsive UI built with Vuetify and Tailwind CSS
 
 ## Tech Stack
 
-| Layer    | Technology                            |
-| -------- | ------------------------------------- |
-| Frontend | Vue 3, Vite 7, Vuetify 4, Tailwind CSS 4 |
-| Backend  | ASP.NET Core (.NET 10), C#           |
-| Database | SQLite via EF Core                    |
+| Layer        | Technology                                |
+| ------------ | ----------------------------------------- |
+| Frontend     | Vue 3, Vite 7, Vuetify 4, Tailwind CSS 4 |
+| Backend      | ASP.NET Core (.NET 10), C#                |
+| Chess Engine | ChessEngine (C#) — move validation, FEN/SAN, endgame detection |
+| Database     | SQLite via EF Core                        |
 
 ## Getting Started
 
@@ -111,22 +114,29 @@ dotnet publish -c Release
 
 ```
 tctm/
-├── TCTM.Server/          # ASP.NET Core backend
-│   ├── Controllers/      # API controllers
-│   ├── DataModel/        # EF Core entities
-│   ├── Dto/              # Data transfer objects
-│   ├── Mappings/         # Entity ↔ DTO mappings
-│   ├── Migrations/       # EF Core migrations
-│   └── Services/         # Business logic (pairing, etc.)
-├── tctm.client/          # Vue 3 frontend
+├── ChessEngine/              # C# chess library
+│   ├── ChessBoard/           # Board logic, move generation, endgame rules
+│   ├── Builders/             # SAN, PGN, FEN builders
+│   ├── Conversions/          # SAN, FEN, PGN conversions
+│   └── Types/                # Piece, Move, Position, enums
+├── TCTM.Server/              # ASP.NET Core backend
+│   ├── Controllers/          # API controllers (incl. LiveGamesController)
+│   ├── DataModel/            # EF Core entities (incl. LiveGame)
+│   ├── Dto/                  # Data transfer objects
+│   ├── Hubs/                 # SignalR hubs (TournamentHub, LiveGameHub)
+│   ├── Mappings/             # Entity ↔ DTO mappings
+│   ├── Migrations/           # EF Core migrations
+│   └── Services/             # Business logic (pairing, live game, clocks)
+├── tctm.client/              # Vue 3 frontend
 │   ├── src/
-│   │   ├── api/          # API client modules
-│   │   ├── components/   # Reusable Vue components
-│   │   ├── pages/        # Route-level page components
-│   │   ├── plugins/      # Vuetify config
-│   │   └── router/       # Vue Router setup
-│   └── public/           # Static assets
-└── TCTM.slnx             # Solution file
+│   │   ├── api/              # API client modules (incl. liveGames)
+│   │   ├── components/       # Reusable Vue components (board, clocks, etc.)
+│   │   ├── composables/      # Vue composables (SignalR hubs, chess engine, store)
+│   │   ├── pages/            # Route-level page components (incl. LiveGamePage)
+│   │   ├── plugins/          # Vuetify config
+│   │   └── router/           # Vue Router setup
+│   └── public/               # Static assets
+└── TCTM.slnx                 # Solution file
 ```
 
 ## License
