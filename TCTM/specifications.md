@@ -2,16 +2,17 @@
 
 ## 1. Overview
 
-**Tiny Chess Tournament Manager (TCTM)** is a lightweight web application that lets a small group of 5–20 people organise and run a chess tournament. A tournament organiser creates a tournament, shares an invite link/code, configures the format and time control, and the system generates the match schedule. Players (or the organiser) manually report results, and the app tracks standings in real time.
+**Tiny Chess Tournament Manager (TCTM)** is a lightweight web application that lets a small group of 5–20 people organise and run a chess tournament. A tournament organiser creates a tournament, shares an invite link/code, configures the format and time control, and the system generates the match schedule. Players can play their games directly in the browser via the built-in **Live Game** board, or report results manually. The app enforces chess rules, manages clocks, and tracks standings in real time.
 
 ### Tech Stack
 
-| Layer    | Technology                                      |
-|----------|-------------------------------------------------|
-| Frontend | Vue 3 (Vite), Vuetify 4, Tailwind CSS 4         |
-| Backend  | ASP.NET Core (C#)                                |
-| Database | SQLite (via EF Core)                             |
-| Hosting  | Single-server / Docker-ready                     |
+| Layer        | Technology                                      |
+|--------------|--------------------------------------------------|
+| Frontend     | Vue 3 (Vite), Vuetify 4, Tailwind CSS 4         |
+| Backend      | ASP.NET Core (C#)                                |
+| Chess Engine | C# library (ChessEngine) — move validation, FEN, SAN, endgame detection |
+| Database     | SQLite (via EF Core)                             |
+| Hosting      | Single-server / Docker-ready                     |
 
 #### Frontend Details
 
@@ -64,7 +65,7 @@ TCTM supports four formats. The organiser picks one when creating a tournament.
 
 ## 4. Time Controls (Game Types)
 
-The organiser selects a time control that applies to **all games** in the tournament. This is informational (displayed on the schedule) — TCTM does not enforce clocks.
+The organiser selects a time control that applies to **all games** in the tournament. When a match is played via the built-in Live Game board, the server enforces the clock — each player's remaining time is tracked server-side and a background service (`ClockMonitorService`) checks for timeouts every second. If a player's clock reaches zero, the game is automatically decided.
 
 | Preset  | Time per side |
 |---------|---------------|
@@ -103,8 +104,30 @@ The organiser picks one of the three presets. Within each preset they choose the
 5. Show how many rounds is required
 
 ### 5.4 Play & Report Results
+
+Results can be determined in two ways: **Live Game** (in-app) or **Manual Reporting**.
+
+#### 5.4a Live Game (in-app play)
+1. Either participant navigates to a match and the system auto-creates a **LiveGame** session.
+2. Both players join the game room via SignalR (`LiveGameHub`). The page shows a chess board, clocks, and a move list.
+3. The **Black player** (or the organiser) starts the game, which begins both clocks.
+4. Players submit moves in SAN notation; the server validates each move against the `ChessEngine`, enforces turn order, and manages clock times.
+5. The game ends automatically on **checkmate**, **stalemate**, **draw by repetition / fifty-move rule / insufficient material**, **timeout**, **resignation**, or **draw by agreement**.
+6. On completion, the match result is recorded and broadcast to the tournament hub.
+7. The organiser can **abort** a live game at any time (the match result is left pending).
+
+##### Draw offer flow
+- A player may offer a draw **on their own turn**.
+- The opponent may accept; if accepted the game ends as a draw.
+- Only one draw offer may be pending at a time.
+
+##### Presence tracking
+- The server tracks which players are connected to each game room (`GamePresenceTracker`).
+- `PlayerJoinedGame` / `PlayerLeftGame` events are broadcast so the UI can indicate readiness.
+
+#### 5.4b Manual Reporting (OTB / external play)
 1. Players see the current round's pairings (who plays whom).
-2. After a game, **either player** or the **organiser** submits the result:
+2. After a game played externally, **either player** or the **organiser** submits the result:
    - **White wins** (1 – 0)
    - **Black wins** (0 – 1)
    - **Draw** (½ – ½)
@@ -167,6 +190,33 @@ The organiser picks one of the three presets. Within each preset they choose the
 | Disputed      | bool   | True if conflicting reports |
 | Bracket       | enum?  | Winners, Losers (only for Double Elimination) |
 
+### LiveGame
+| Field          | Type       | Notes |
+|----------------|------------|-------|
+| Id             | GUID       | PK |
+| MatchId        | GUID       | FK → Match (one-to-one) |
+| WhiteClockMs   | long       | Remaining time for White in milliseconds |
+| BlackClockMs   | long       | Remaining time for Black in milliseconds |
+| InitialClockMs | long       | Starting clock value (derived from tournament TimeControlMinutes) |
+| MoveData       | string     | Pipe-delimited move log (see _Move Data Format_ below) |
+| Status         | enum       | NotStarted, InProgress, Completed, Aborted |
+| StartedAt      | DateTime?  | UTC timestamp when game started |
+| CompletedAt    | DateTime?  | UTC timestamp when game ended |
+
+#### Move Data Format
+Moves and control events are stored as a pipe-delimited (`|`) string of tokens. Each token has the format:
+
+```
+ply:san:clockMs:epochMs
+```
+
+- **ply** — 1-based sequence number.
+- **san** — Standard Algebraic Notation for chess moves, or a control keyword: `resign`, `timeout`, `draw-offer`, `draw-accept`, `abort`.
+- **clockMs** — the moving player's remaining clock in ms after the move.
+- **epochMs** — Unix epoch in ms when the token was recorded.
+
+Example: `1:e4:299200:1709836800000|2:e5:298500:1709836810000`
+
 ### Standing (computed view / materialised after each round)
 | Field            | Type  | Notes |
 |------------------|-------|-------|
@@ -208,6 +258,13 @@ All endpoints are prefixed with `/api`.
 | POST   | `/tournaments/{slug}/matches/{id}/result` | Report result | Player token or admin |
 | PUT    | `/tournaments/{slug}/matches/{id}/result` | Override result | Admin token |
 
+### Live Games
+| Method | Path | Description | Auth |
+|--------|------|-------------|------|
+| GET    | `/tournaments/{slug}/matches/{id}/live` | Get or auto-create a LiveGame for a match | Player token (query param) |
+| GET    | `/tournaments/{slug}/live-games` | List all live games in a tournament | None |
+| POST   | `/tournaments/{slug}/matches/{id}/live/abort` | Abort a live game | Admin token |
+
 ### Standings
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -224,6 +281,7 @@ All endpoints are prefixed with `/api`.
 | `/t/{slug}/bracket` | Bracket View | Visual bracket (elimination formats) |
 | `/t/{slug}/standings` | Standings | Full standings table |
 | `/t/{slug}/admin` | Admin Panel | Organiser controls (start, advance, override) |
+| `/t/{slug}/game/{matchId}` | Live Game | Interactive chess board with clocks, move list, and game controls |
 
 ---
 
@@ -232,14 +290,16 @@ All endpoints are prefixed with `/api`.
 - **No accounts / no external auth** — purely token-based via local storage.
 - **Responsive** — usable on mobile (players will be reporting results from their phones).
 - **Lightweight** — SQLite database, no external dependencies beyond the .NET runtime.
-- **Real-time updates** — use SignalR to push match results and round changes to connected clients.
-- **Offline-tolerant** — if a player loses connection, they can still report when back online.
+- **Real-time updates** — two SignalR hubs:
+  - `TournamentHub` (`/tournamentHub`) — tournament-level events (player joined, round created, match updated, etc.).
+  - `LiveGameHub` (`/liveGameHub`) — game-level events (moves, clocks, draw offers, game ended, player presence). Authenticated via `token` query parameter.
+- **Server-side clock enforcement** — a `ClockMonitorService` background service checks for timeouts every second and broadcasts clock sync updates every 5 seconds.
+- **Offline-tolerant** — if a player loses connection, SignalR auto-reconnects and re-joins the game/tournament group.
 
 ---
 
 ## 10. Out of Scope (v1)
 
-- Online chess play (players play OTB or on Lichess/Chess.com separately).
 - Chess platform API integration for auto-importing results.
 - User accounts / persistent profiles across tournaments.
 - Elo / rating tracking.
@@ -257,5 +317,6 @@ All endpoints are prefixed with `/api`.
 | 4 | **Swiss engine** | Swiss pairing algorithm + tiebreaks |
 | 5 | **Elimination engine** | Single & double elimination brackets |
 | 6 | **Real-time updates** | SignalR hub for live score/round changes |
-| 7 | **Polish & deploy** | Mobile UI pass, error handling, Docker image |
+| 7 | **Live Game engine** | In-app chess play: board UI, move validation (ChessEngine), server-side clocks, LiveGameHub, draw/resign/abort flows |
+| 8 | **Polish & deploy** | Mobile UI pass, error handling, Docker image |
 

@@ -1,4 +1,9 @@
 <Solution>
+  <Folder Name="/Solution items/">
+    <File Path="chessboardsspecification.md" />
+    <File Path="livechessgamespecification.md" />
+    <File Path="specifications.md" />
+  </Folder>
   <Project Path="ChessEngine/ChessEngine.csproj" />
   <Project Path="tctm.client/tctm.client.esproj">
     <Build />
