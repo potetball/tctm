@@ -1,15 +1,26 @@
-This file explains how Visual Studio created the project.
+# Changelog
 
-The following tools were used to generate this project:
-- create-vite
+All notable changes to the TCTM Server project are documented in this file.
 
-The following steps were used to generate this project:
-- Create vue project with create-vite: `npm init --yes vue@latest tctm.client -- --eslint `.
-- Update `vite.config.js` to set up proxying and certs.
-- Update `HelloWorld` component to fetch and display weather information.
-- Create project file (`tctm.client.esproj`).
-- Create `launch.json` to enable debugging.
-- Add project to solution.
-- Update proxy endpoint to be the backend server endpoint.
-- Add project to the startup projects list.
-- Write this file.
+## 2026-03-08
+
+- Updated readme (`95082bb`)
+- Added live chess game (`a9f8c0b`)
+
+## 2026-03-01
+
+- Updated dashboard (`7ad927c`)
+
+## 2026-02-28
+
+- CanReport extra code (`88b1f66`)
+- Appsetting update (`96c6a70`)
+- Ready for publish (`107e24b`)
+- Added logo (`9d5a7b9`)
+- Fixed scoreboard (`1fc5a78`)
+- Added play both colors (`a1db4a7`)
+- Added basic game (`ba045a0`)
+- Added create tournament view (`0a144f9`)
+- Added api client (`6471f01`)
+- Implemented db, repo, dto, controllers (`890bd9a`)
+- First commit, specification and scaffolding (`d82928e`)
